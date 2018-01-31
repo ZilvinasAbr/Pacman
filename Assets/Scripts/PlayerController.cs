@@ -1,6 +1,7 @@
 ﻿using System;
 using UnityEngine;
 using System.Collections;
+using Tobii.Gaming;
 
 public class PlayerController : MonoBehaviour
 {
@@ -106,11 +107,7 @@ public class PlayerController : MonoBehaviour
         Vector2 p = Vector2.MoveTowards(transform.position, _dest, speed);
         GetComponent<Rigidbody2D>().MovePosition(p);
 
-        // get the next direction from keyboard
-        if (Input.GetAxis("Horizontal") > 0) _nextDir = Vector2.right;
-        if (Input.GetAxis("Horizontal") < 0) _nextDir = -Vector2.right;
-        if (Input.GetAxis("Vertical") > 0) _nextDir = Vector2.up;
-        if (Input.GetAxis("Vertical") < 0) _nextDir = -Vector2.up;
+        _nextDir = GetDirectionFromGaze();
 
         // if pacman is in the center of a tile
         if (Vector2.Distance(_dest, transform.position) < 0.00001f)
@@ -128,6 +125,48 @@ public class PlayerController : MonoBehaviour
                 // otherwise, do nothing
             }
         }
+    }
+
+    private Vector2 GetDirectionFromKeyboard()
+    {
+        if (Input.GetAxis("Horizontal") > 0) return Vector2.right;
+        if (Input.GetAxis("Horizontal") < 0) return -Vector2.right;
+        if (Input.GetAxis("Vertical") > 0) return Vector2.up;
+        if (Input.GetAxis("Vertical") < 0) return -Vector2.up;
+        
+        return Vector2.zero;
+    }
+
+    private Vector2 GetDirectionFromGaze()
+    {
+        var gazePosition = TobiiAPI.GetGazePoint().Screen;
+        var playerPosition = Camera.main.WorldToScreenPoint(transform.position);
+
+        var angle = GetAngle(gazePosition, playerPosition);
+
+        if (angle >= 0 && angle < 45 || angle >= 305 && angle < 360)
+        {
+            return Vector2.right;
+        }
+        if (angle >= 45 && angle < 135)
+        {
+            return Vector2.up;
+        }
+        if (angle >= 135 && angle < 215)
+        {
+            return Vector2.left;
+        }
+        if (angle >= 215 && angle < 305)
+        {
+            return Vector2.down;
+        }
+
+        return Vector2.zero;
+    }
+
+    private static double GetAngle(Vector2 gazePosition, Vector2 playerPosition)
+    {
+        return 180.0 - Math.Atan2(gazePosition.y - playerPosition.y, playerPosition.x - gazePosition.x) * 180.0 / Math.PI;
     }
 
     public Vector2 getDir()
