@@ -137,36 +137,63 @@ public class PlayerController : MonoBehaviour
         return Vector2.zero;
     }
 
+    public float MinimumRadiusToChangeDirection = 100f;
+    private Vector3 _previousDirection;
+
     private Vector2 GetDirectionFromGaze()
     {
         var gazePosition = TobiiAPI.GetGazePoint().Screen;
         var playerPosition = Camera.main.WorldToScreenPoint(transform.position);
 
-        var angle = GetAngle(gazePosition, playerPosition);
+        var polarRelativeToPlayer = CartesianToPolar(gazePosition, playerPosition);
+        var radius = polarRelativeToPlayer.x;
+        var angle = polarRelativeToPlayer.y;
 
-        if (angle >= 0 && angle < 45 || angle >= 305 && angle < 360)
-        {
-            return Vector2.right;
-        }
-        if (angle >= 45 && angle < 135)
-        {
-            return Vector2.up;
-        }
-        if (angle >= 135 && angle < 215)
-        {
-            return Vector2.left;
-        }
-        if (angle >= 215 && angle < 305)
-        {
-            return Vector2.down;
-        }
+        var nextDirection = GetNextDirection(radius, angle);
+        _previousDirection = nextDirection;
+        return nextDirection;
+    }
 
+    private static Vector2 CartesianToPolar(Vector2 gazePosition, Vector2 playerPosition)
+    {
+        var angle = 180.0 - Math.Atan2(gazePosition.y - playerPosition.y, playerPosition.x - gazePosition.x) * 180.0 / Math.PI;
+        var radius = Math.Sqrt(Math.Pow(gazePosition.x - playerPosition.x, 2) +
+                               Math.Pow(gazePosition.y - playerPosition.y, 2));
+        return new Vector2((float)radius, (float)angle);
+    }
+
+    private Vector2 GetNextDirection(float radius, float angle)
+    {
+        if (angle >= 0 && angle < 45 || angle >= 315 && angle < 360) return Vector2.right;
+        if (angle >= 45 && angle < 135) return Vector2.up;
+        if (angle >= 135 && angle < 225) return Vector2.left;
+        if (angle >= 225 && angle < 315) return Vector2.down;
         return Vector2.zero;
     }
 
-    private static double GetAngle(Vector2 gazePosition, Vector2 playerPosition)
+    private bool ShouldChangeDirection(float radius)
     {
-        return 180.0 - Math.Atan2(gazePosition.y - playerPosition.y, playerPosition.x - gazePosition.x) * 180.0 / Math.PI;
+        return radius > MinimumRadiusToChangeDirection;
+    }
+
+    private static Vector3 DirectionRight(float speed)
+    {
+        return new Vector3(speed, 0, 0);
+    }
+
+    private static Vector3 DirectionLeft(float speed)
+    {
+        return new Vector3(-speed, 0, 0);
+    }
+
+    private static Vector3 DirectionUp(float speed)
+    {
+        return new Vector3(0, speed, 0);
+    }
+
+    private static Vector3 DirectionDown(float speed)
+    {
+        return new Vector3(0, -speed, 0);
     }
 
     public Vector2 getDir()
